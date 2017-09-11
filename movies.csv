@@ -1,0 +1,34 @@
+﻿movie_id,movie_critic,movie_name,movie_rate
+1,John,Death Note,2
+2,John,Dunkirk,5
+3,John,Mother!,3
+4,John,Logan Lucky,4
+5,John,Wonder Woman,3
+6,John,Unlocked,2
+7,Angela,Death Note,1
+8,Angela,Dunkirk,4
+9,Angela,Mother!,3
+10,Angela,Logan Lucky,4
+11,Angela,Wonder Woman,5
+12,Angela,Unlocked,1
+13,Jared,Death Note,4
+14,Jared,Dunkirk,5
+15,Jared,Mother!,3
+16,Jared,Logan Lucky,3
+17,Jared,Wonder Woman,4
+18,Jared,Unlocked,2
+19,Steven,Death Note,2
+20,Steven,Dunkirk,5
+21,Steven,Mother!,3
+22,Steven,Logan Lucky,3
+23,Steven,Wonder Woman,5
+24,Steven,Unlocked,1
+25,Becky,Death Note,1
+26,Becky,Dunkirk,5
+27,Becky,Mother!,3
+28,Becky,Logan Lucky,4
+29,Becky,Wonder Woman,5
+30,Becky,Unlocked,2
+
+(30 row(s) affected)
+

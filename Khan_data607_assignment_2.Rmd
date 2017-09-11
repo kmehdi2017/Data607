@@ -1,0 +1,153 @@
+---
+title: "Khan_data607_assignment_2"
+author: "Mehdi Khan"
+date: "September 8, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts=list(width.cutoff=65),tidy=TRUE)
+```
+
+```{r pressure, echo=FALSE}
+##plot(pressure)
+```
+The following sql query was used to create a table in SQL Server with movies data:
+
+use
+data607
+
+CREATE TABLE movies(
+	movie_id int identity(1,1),
+	movie_critic varchar(50),
+	movie_name varchar(50),
+	movie_rate int
+);
+
+INSERT INTO movies
+VALUES	('John',  'Death Note',2),
+		('John',  'Dunkirk',5),
+		('John',  'Mother!',3),
+		('John',  'Logan Lucky',4),
+		('John',  'Wonder Woman',3),
+		('John',  'Unlocked',2),
+		('Angela',  'Death Note',1),
+		('Angela',  'Dunkirk',4),
+		('Angela',  'Mother!',3),
+		('Angela',  'Logan Lucky',4),
+		('Angela',  'Wonder Woman',5),
+		('Angela',  'Unlocked',1),
+		('Jared',  'Death Note',4),
+		('Jared',  'Dunkirk',5),
+		('Jared',  'Mother!',3),
+		('Jared',  'Logan Lucky',3),
+		('Jared',  'Wonder Woman',4),
+		('Jared',  'Unlocked',2),
+		('Steven',  'Death Note',2),
+		('Steven',  'Dunkirk',5),
+		('Steven',  'Mother!',3),
+		('Steven',  'Logan Lucky',3),
+		('Steven',  'Wonder Woman',5),
+		('Steven',  'Unlocked',1),
+		('Becky',  'Death Note',1),
+		('Becky',  'Dunkirk',5),
+		('Becky',  'Mother!',3),
+		('Becky',  'Logan Lucky',4),
+		('Becky',  'Wonder Woman',5),
+		('Becky',  'Unlocked',2)
+
+
+Using package RODBC to connect to SQL Server:
+```{r}
+library(RODBC)
+
+```
+Connecting to the data source (SQL Server) through ODBC connection:
+
+```{r}
+## the name of the DSN ("data607") and appropriate credentials are provided 
+## to creare the connection
+
+dataSrc <- odbcConnect("data607", uid="DataUser", pwd="Data607@Fall2017")
+
+```
+
+Redaing from the database:
+```{r}
+## See the accessible tables, tableType = "TABLE" is used to get only table objects
+## otherwise it may list many different data objects
+
+sqlTables(dataSrc, tableType = "TABLE" )
+
+
+## get the table (in this case table called 'movies') and assign the data to a dataframe 
+moviesDS <- sqlFetch(dataSrc,"movies", stringsAsFactors = FALSE)
+head(moviesDS)
+
+```
+Subsetting the dataframe:
+```{r}
+## subsetting the data
+subset(moviesDS, moviesDS$movie_rate >3)
+
+```
+USing SQL Query to load data (instead of subsetting):
+```{r}
+## It was also possible to get the required data instead of loading all data
+## and subsetting from it. a sql query would do the job
+
+requiredData <- sqlQuery(dataSrc, paste('Select * from "movies"', 'Where "movie_rate" > 3'))
+head(requiredData)
+```
+The connection object needs to be closed once it is no longer needed:
+```{r}
+odbcClose(dataSrc)
+```
+
+ 
+ ALTERNATIVE APPROACH:
+ Reading and loading data from a CSV file that was created as an output of a sql (select * from movies)
+ to get all the data from the 'movies' table in a sql server databse
+ 
+ 
+```{r}
+## The csv file was stored in the working directory, so only the name of the
+## file is enough (instead of providing the whole path)
+csvMoviesDS <- read.csv("movies.csv", stringsAsFactors = FALSE)
+head(csvMoviesDS)
+
+## This dataframe (csvMoviesDS) now can be used like any other dataframe in R
+```
+Some data operations:
+```{r}
+library(dplyr)
+filter(moviesDS, movie_rate == 1)
+```
+dplyr chaining;
+Selecting the highest rated movies and number of times they received such rating:
+```{r}
+highestRated <- moviesDS %>% select(movie_name,movie_rate) %>% filter(movie_rate == 5) %>% count(movie_name, movie_rate)
+
+names(highestRated)[3]='count'
+highestRated
+```
+
+Raning the movies based on their ratings:
+```{r}
+## movie list by their total rating
+most_loved_hated_movies <- aggregate(moviesDS$movie_rate, by=list(movie_name =moviesDS$movie_name), FUN = sum)
+
+
+## sorting movies by rate
+most_loved_hated_movies <- most_loved_hated_movies[with(most_loved_hated_movies, order(most_loved_hated_movies$x, decreasing = TRUE)),]
+
+names(most_loved_hated_movies)[2]="overall_rating"
+
+most_loved_hated_movies
+
+
+```
+
+
