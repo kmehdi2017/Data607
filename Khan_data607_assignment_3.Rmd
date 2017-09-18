@@ -1,0 +1,170 @@
+---
+title: "Regular Expression, Data 607, Assignment 3"
+author: "Mehdi Khan"
+date: "September 15, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts=list(width.cutoff=65),tidy=TRUE)
+```
+##Problem 3
+Copy the introductory example. The vector name stores the extracted names:
+```{r}
+raw.data <- "555-1239Moe Szyslak(636) 555-0113Burns, C.Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson,Homer5553642Dr. Julius Hibbert"
+
+library(stringr)
+name <- unlist(str_extract_all(raw.data,"[[:alpha:]., ]{2,}"))
+phone <- str_extract_all(raw.data,"\\(?(\\d{3})\\)?(-| )?\\(?(\\d{3})?(-| )?(\\d{4})")
+
+print(name)
+
+```
+
+
+
+(a). rearrange the vector so that all elements conform to the standard first_name last_name.
+
+Note: Please note that Montgomery is assumed the first name for "Burns, C.Montgomery", although in reality "C." probably the initial of the first name and  Montgomery would be the middle name. The commented out code would generate the result that would add both the initial and the middle name ("C.Montgomery") as  as the first name. 
+```{r}
+
+revised_name <- name
+
+
+for(i in 1:length(revised_name)){
+  if (str_detect(revised_name[i],",") && str_detect(revised_name[i],"\\.") == TRUE ) {
+    draft_first_name <-str_sub(revised_name[i],(str_locate(revised_name[i],",")[1]+1),(str_length(revised_name[i])))
+    first_name <- str_sub(draft_first_name,(str_locate(draft_first_name,"\\.")[1]+1))
+    
+    ## if first name would include initial & middle name
+    ## first_name <- str_trim(draft_first_name,side=c("left"))
+    
+    last_name <-  str_sub(revised_name[i],end=(str_locate(revised_name[i],",")[1]-1))
+    revised_name[i] <- str_c(first_name, last_name, sep = " ")
+    ##print(revised_name[i])
+  }
+  else if (str_detect(revised_name[i],",") == FALSE && str_detect(revised_name[i],"\\.") == TRUE ){
+  revised_name[i] <-  str_trim(str_sub(revised_name[i],(str_locate(revised_name[i],"\\."))[1]+1),side = c("both"))
+    ##print(revised_name[i])
+  }
+  
+  else if (str_detect(revised_name[i],",") == TRUE && str_detect(revised_name[i],"\\.") == FALSE ){
+    first_name <- str_sub(revised_name[i],(str_locate(revised_name[i],",")[1]+1),(str_length(revised_name[i])))
+    last_name <-  str_sub(revised_name[i],end=(str_locate(revised_name[i],",")[1]-1))
+    revised_name[i] <- str_c(first_name, last_name, sep = " ")
+    ##print(revised_name[i])
+  }
+ }
+
+ print(revised_name)
+
+
+```
+
+(b). Construct a logical vector indicating whether a character has a title (i.e.,Rev. and Dr.).
+```{r}
+
+##str_extract_all(name,"[[:alpha:]]{2,}\\.")
+has_title <- str_detect(name,"[[:alpha:]]{2,}\\.")
+print(has_title)
+```
+(c) Construct a logical vector indicating whether a character has a second name.
+```{r}
+## Having an initial (for example C.Montgomery) along with first and last names is an indication that name has a second name.
+
+## below codes check for an initial in the name
+has_second_name <- str_detect(name,"[[:blank:]]{1}[[:alpha:]]{1}\\.")
+print(has_second_name)
+
+```
+
+## Problem 4. Describe the types of strings that conform to the following regular expressions and construct an example that is matched by the regular expression.
+
+(a) [0-9]+\\$
+
+This will match a patterm that has any single or more numbers in 0 to 9 that ends with $ symbol:
+```{r}
+numvar <- c("15678$bc34", "ABC50078$","200500ux$", "234000", "8$")
+matchnum <- str_extract_all(numvar,"[0-9]+\\$")
+print(matchnum)
+```
+Here it matched the parts of element 1, 2, and 5 where one or more continuous numbers ended with $.  
+
+
+(b) \\b[a-z]{1,4}\\b
+
+This match a set of smallcap characters in   with length of 1 through four.
+```{r}
+charvar <- c("mmmkBCD", "mmmkk", "Ammkk","mmk","mmmk", "aBCDefghL")
+matchchar <- str_extract_all(charvar,"\\b[a-z]{1,4}\\b")
+print(matchchar)
+```
+Here only element 4 and 5 matched that are all smallcap with length of four or less. 
+
+
+(c) .*?\\.txt$
+
+This will match a pattern that ends with ".txt" , the patterns can have 0 or 1 or more characters before .txt
+```{r}
+txtvar <- c("desCRIPTIONfile.txt", "probLEM5.txtBBC","probLEM5.txt",".txt","txt")
+matchtxt <- str_extract_all(txtvar,".*?\\.txt$")
+print(matchtxt)
+
+```
+Here only element 1,3, and 4 have been matched that ended with .txt
+
+
+(d) \\d{2}/\\d{2}/\\d{4}
+
+THis will match patterns of eight digits that are seperated by  "/" (forward slash) after 2nd and 4th digits.
+
+```{r}
+digitvar <- c("12/34/567834","12/34/5678ABCD","efGJh56/67/1123abc5945/4546again78/34/8902a","12/3423/567834")
+str_extract_all(digitvar,"\\d{2}/\\d{2}/\\d{4}")
+matchdigit <- str_extract_all(digitvar,"\\d{2}/\\d{2}/\\d{4}")
+print(matchdigit)
+```
+It picks up parts from element 1,2,3 that conform to the regular expression. Note that it picked the first four digits after the second forward slash (/) in element 1 but looked for exactly two digits after the first forward slash (/) in element 4 and ultimately matched nothing from that element.
+
+
+(e) <(.+?)>.+?</\\1>
+
+This will match patterns similar to html tags. It will match one or more characters between < > at the begining followed by any number of characters and finaly exact same characters after a forward slash (/) and beween < > at the end of the pattern. such as <abc> some characters </abc>
+```{r}
+htmlvar <- c("<title>Page Title</title>abcdfeml23434 ashgym","<h1>This is a Heading</h1>")
+matchhtml <- str_extract_all(htmlvar,"<(.+?)>.+?</\\1>")
+print(matchhtml)
+```
+
+## Problem 9: The following code hides a secret message. Crack it with R and regular expressions
+
+Answer:
+```{r}
+secret_message <- "clcopCow1zmstc0d87wnkig7OvdicpNuggvhryn92Gjuwczi8hqrfpRxs5Aj5dwpn0TanwoUwisdij7Lj8kpf03AT5Idr3coc0bt7yczjatOaootj55t3Nj3ne6c4Sfek.r1w1YwwojigOd6vrfUrbz2.2bkAnbhzgv4R9i05zEcrop.wAgnb.SqoU65fPa1otfb7wEm24k6t3sR9zqe5fy89n6Nd5t9kc4fE905gmc4Rgxo5nhDk!gr"
+
+## Examining all the lower case characters and numbers. conclusion: Does not seem to have anything meaningful
+unclassified_ld <- unlist(str_extract_all(secret_message, "[[:lower:][:digit:]\\.]"))
+
+## Examining all the numbers. conclusion: Does not seem to have anything meaningful
+unclassified_d <- unlist(str_extract_all(secret_message, "[[:digit:]\\.]"))
+
+## Examining all the upper case characters and numbers. conclusion: Does not seem to have anything meaningful
+unclassified_Ud <- unlist(str_extract_all(secret_message, "[[:upper:][:digit:]\\.]"))
+
+## Examining all the upper case characters. conclusion: It does  seem to have a message
+unclassified_U <- unlist(str_extract_all(secret_message, "[[:upper:]\\.]"))
+
+## removing all the spaces
+unclassified_U <- paste(unclassified_U, collapse = '')
+
+## replacing all the dots by blank spaces and then inserting the first dot again.  
+unclassified <- str_replace(str_replace_all(unclassified_U,"\\."," ")," ","\\. ")
+
+print(unclassified)
+
+
+```
+
+
