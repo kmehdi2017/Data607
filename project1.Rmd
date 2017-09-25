@@ -3,8 +3,8 @@ title: "project 1, Data607"
 author: "Mehdi Khan"
 date: "September 21, 2017"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -80,6 +80,6 @@ head(tournamentInfo)
 ```
 ## Saving the data in a csv file:
 ```{r}
-write.csv(tournamentInfo,"C:\\temp\\chessPlayerInfo.txt",row.names = FALSE)
+write.csv(tournamentInfo,"C:\\temp\\chessPlayerInfo.csv",row.names = FALSE)
 ```
 
