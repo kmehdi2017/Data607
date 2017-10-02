@@ -1,0 +1,113 @@
+---
+title: 'Data607 : Tidying and Transforming Data'
+author: "Mehdi Khan"
+date: "September 29, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts=list(width.cutoff=65),tidy=TRUE)
+```
+
+#load flight data:
+```{r}
+FlightData <- read.csv("C:\\temp\\FlightInfo.csv", sep = ",", stringsAsFactors = FALSE)
+FlightData
+```
+
+In the original data, values (city names) are being used as variables, the data also have some empty row values and meaningless column names. So in order to make the data tidy the wide format needs to be converted to long format so that all the city names can be arranged under one variable. Empty values in the rows and meaningless column names also need to be replaced with appropriate values and names respectively:   
+
+```{r}
+library(dplyr)
+library(data.table)
+library(tidyr)
+library(zoo)
+library(ggplot2)
+library(gridExtra)
+
+FlightInfo <- FlightData %>% 
+  mutate(X = na.locf(X, na.rm = F)) %>% 
+  setnames( old=c('X','X.1'), new=c('Airline','Arrival')) %>%
+  gather('City','Flight_Counts',3:7)
+
+FlightInfo
+```
+The data looks much better now but still there are two rows for each ovseravtion of a city/Airline pair, so more transformation is needed to make it tidy so that each ovservation can be arranged in a single row:
+```{r}
+
+FlightData <- spread(FlightInfo,2,4)
+FlightData
+```
+
+## Analysis and comparison:
+The below visualization of the shows comparison of the airlines based on their delayed flights. The plot depicts that in most of the cities AM West Airlines has the larger number of delayed flights except Seattle where Alaska Airline has more delayed flights. 
+
+Figure 1:
+```{r}
+ggplot(FlightData, aes(x=City,y=Delayed) )+geom_point(aes(size=1, color=Airline)) 
+```
+
+Some statistics:
+```{r}
+
+Flight_Statistics <- FlightData %>% group_by(Airline)%>% summarise(`Avg.Delayed`=mean(Delayed), `Avg.On Time`=mean(`On Time`),  `Total Delayed`= sum(Delayed), `Total On Time`= sum(`On Time`), `Total Flights`=sum(Delayed+`On Time`), `Percent Delayed`=round((`Total Delayed`/`Total Flights`),2 ), `Percent On Time`=round((`Total On Time`/`Total Flights`),2 ), `Maximum Delay`= max(Delayed), `Minimum Delay`= min(Delayed)  ) 
+
+Flight_Statistics
+```
+Above data statistics shows that the percentage of delayed flights is higher for Alaska Airlines if all the flights are considered. Therefore if no further analysis is done it is possible to come up with a conclusion that AM West Airline is better since it has  lower percentage of delayed flights. 
+
+
+## Further Analysis:
+Ratio of delayed and on time flights by City:
+```{r}
+Delyed_Ratio_Cities <- mutate(FlightData, Percent_Delay_City = round(Delayed/(Delayed+`On Time`),2),Percent_ontime_City = round(`On Time`/(Delayed+`On Time`),2))
+Delyed_Ratio_Cities
+```
+The worst city in terms of delayed flights is San Francisco for both flights, both Airlines have largest delayed flights in San Francisco.Figure 2 and Figure 3 reveal that Alaska Airlines is better in every city compared to AM West Airlines. In every city Alaska Airline has smaller proportion of delayed flights and larger proportion of on time flights.
+
+Figure 2:
+```{r}
+p1 <- ggplot(Delyed_Ratio_Cities, aes(City, Percent_Delay_City))+geom_bar(aes(fill = Airline),stat = "identity", position = "dodge") + labs(title = "Percentage of Delayed Flights by City ", y = "Percentge")
+
+p2 <- ggplot(Delyed_Ratio_Cities, aes(City, Percent_ontime_City))+geom_bar(aes(fill = Airline),stat = "identity", position = "dodge") + labs(title = "Percentage of on time Flights by City ", y = "Percentge")
+
+grid.arrange(p1,p2,nrow=2)
+
+```
+
+Figure 3:
+```{r}
+ggplot(Delyed_Ratio_Cities, aes(x=City, y=Percent_Delay_City, group=Airline, color=Airline))+geom_line() + labs(title = "Percentage of Delayed Flights by City ", y = "Percentge")
+
+```
+
+So Alaska Airline is better when the percentage of  flights (both delayed and on time) are considered in every city. But AM West appears to be better when all the flights are considered at a time, which suggests that there must be some large values in one or two cities that would explain this discrepancy.  
+
+Figure 4 shows that in Phoenix AM West Airline has a huge number of flights compared to what Alaska has in there. Figure 5 shows that Phoenix also has a very large number of on time flights. Since the presence of Alaska Airline in Phoenix is very samll it is obvious that most of those on time flights belong to AM West Airline. Therefore this large number of on time flights in Phoenix affect the overall data in favor of AM West Airline and explains why  AM West Airline looks better when the data is seen as a whole. 
+
+Figure 4:
+```{r}
+ggplot(FlightInfo, aes(City, Flight_Counts))+geom_bar(aes(fill = Airline),stat = "identity", position = "dodge") + labs(title = "Flight counts by City ", y = "Count")
+
+
+```
+
+Figure 5:
+```{r}
+ggplot(FlightInfo, aes(x = Arrival, y=Flight_Counts, fill = City)) + geom_bar(stat="identity",position="dodge") + xlab("Airlines") + ylab("Amount of flights") 
+
+```
+
+
+The density plot below also shows that Alaska Airline is doing better since it has higher density of lower percentage of delayed flights:
+```{r}
+qplot(Percent_Delay_City, data = Delyed_Ratio_Cities, geom = "density",
+    color = Airline, linetype = Airline)
+```
+
+## Conclusion:
+AM West Airline has lower percentage of delayed flights when all the data is considered. But when each city is seperately considered it becomes clear that Alaska Airline performs better and has lower percentage of delayed flights in each city. The huge number of flights of AM West Airline in Phoenix is actually responsible for this false impression that AM West Airline is better (when all the data is considered at a time).
+
+
