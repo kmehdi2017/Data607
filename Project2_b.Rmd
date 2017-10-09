@@ -1,0 +1,92 @@
+---
+title: "Data 607, Project 2, second part"
+author: "Mehdi Khan"
+date: "October 8, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts=list(width.cutoff=65),tidy=TRUE)
+```
+
+##Introduction:
+This data was suggested by Michael D'acampora  in our week-5 discussion on untidy data. I selected this one as one of the three dataset that we needed for project 2. This data contains various types of drug, percentage of uses, and the frequency of drug uses in different age groups for  12 months .     
+
+The data was downloaded as a CSV file, which then needed to be made tidy from its raw form in order to do analysis in R. The analysis was done to see if the data can provide insight on drug use and the frequency of use in terms of age and drug types.
+
+##Load necessary libraries:
+```{r}
+library(stringr)
+library(tidyr)
+library(dplyr)
+library(data.table)
+```
+
+## load data:
+```{r}
+drugDataRaw <- read.csv("C:\\Temp\\druguse.csv", sep = ",",stringsAsFactors = FALSE, fill = TRUE)
+str(drugDataRaw)
+```
+All the types of drug and their frequency could be arranged under two columns which would change the format of the dataset from wide to long. The types of drug and frequencies were originally arranged in alternative column names, so those columns were rearranged so that all the types and all frequencies could be rffered easily in gather function, since both frequencies and drug types needed to be reorganized two datasets were created for easy untidy operations
+```{r}
+drugDataRaw <- mutate(drugDataRaw, age_group=ifelse(age %in% (12:21),"12-21",age))
+col_order_use <-grep("use",colnames(drugDataRaw))
+col_order_frequency <-grep("frequency",colnames(drugDataRaw))
+
+select(drugDataRaw,col_order_use)
+select(drugDataRaw,col_order_frequency)
+
+colnames(drugDataRaw)[col_order_use] <- sub(".use","",colnames(drugDataRaw)[col_order_use])
+drugType <- select(drugDataRaw,c(1,2,29,col_order_use))
+drugFreq <- select(drugDataRaw,c(col_order_frequency))
+
+drugType <- gather(drugType, drug_types,use_percent,4:16)
+drugFreq <- gather(drugFreq, frequent,frequency,1:13)
+# drugData <- cbind(select(drugDataRaw,col_order_use),select(drugDataRaw,col_order_frequency))
+
+drugData <- cbind(drugType,drugFreq)
+
+drugData <- drugData[,-6]
+```
+#Some statistics:
+```{r}
+library(ggplot2)
+
+drug_stat_type <- drugData %>% group_by(drug_types)%>% summarise(highest_use=max(use_percent),highest_frequency = max(frequency),min_use=min(use_percent), age=drugData[which.max(use_percent),1] )
+drug_stat_age <- drugData %>% group_by(age_group)%>% summarise(highest_use=max(use_percent),highest_frequency = max(frequency),min_use=min(use_percent),drug_types=drugData[which.max(use_percent),4])
+```
+stat 1:
+```{r}
+
+View(drug_stat_type)
+```
+
+
+stat 2:
+```{r}
+View(drug_stat_age)
+```
+
+Figure 1:
+```{r}
+ggplot(drug_stat_type, aes(x=drug_types, y=highest_frequency)) + geom_point(aes( color=age, size=highest_use))+ labs(title = "Drug types and percentage of uses in different ages") +theme(axis.text.x=element_text(angle=90,hjust=1))
+
+```
+
+Both the stats and the figure 1 shows that alcohol is the highest abused substance among all but the frequency of alcohol use is considerably lower than other more harmful substances. Ages between 22 and 23 are the highest abusers of alcohol and heroin. While the frequency of heroin is low but the percentage of use is really high i.e. whoever is addicted to heroin uses it at a higher level. Closer attention needs to be drawn to age group 20, they are the biggest users of marijuana, pain releiver and cocaine, their uses are distributed but the combined use is big. 
+
+Figure 2:
+```{r}
+ggplot(drugData, aes( age_group, `use_percent`))+geom_bar(aes(fill = drug_types),stat = "identity", position = "dodge") + labs(title = "Drug types and their in various age groups", y = "percentage of use")
+
+```
+Figure 2 depicts that alcohol is the most abused substance in all age groups. While the range in age group 12-21 is bigger still it is a bad news that this age group has a huge abuse percentage. 
+
+Figure 3:
+```{r}
+ggplot(drugData, aes(x=age_group, y=use_percent, group=drug_types, color=drug_types))+geom_line() + labs(title = "Percentage of use of drugs by various age groups ", y = "Percentge")
+
+```
+Figure 3 shows that alcohol and marijuana are two highest abused substance. The use of both declines age the population grow older although the rate of decline in alcohol is not encouraging. The  percentage of use of both drugs in age group 12-21 is very alarming. 

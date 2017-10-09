@@ -1,0 +1,195 @@
+---
+title: "Data 607, Project 2, first part"
+author: "Mehdi Khan"
+date: "October 7, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts=list(width.cutoff=65),tidy=TRUE)
+```
+
+##Introduction:
+This data was suggested by Hector Santana in our week-5 discussion on untidy data. I selected this one as one of the three dataset that we needed for project 2. This data is a part of human migration dataset created and hosted by United Nations. Different aspects of wotldwide migration are organized in various seperate datasets that can be downloaded in excel format. This particular data provide information on the migration stock (which refers to the people who live in countries that are not their country of births) by major areas, regions, countries, sexes from 1995 to 2015.     
+
+The data was converted from excel to a CSV file, which then needed to be made tidy from its raw form in order to do analysis in R. The analysis is done to see if the data can provide insight on relative migration in Asian countries.
+
+##Load necessary libraries:
+```{r}
+library(stringr)
+library(tidyr)
+library(dplyr)
+library(data.table)
+```
+
+## load data:
+```{r}
+rawdat <- read.csv("C:\\Temp\\UN_MigrantStockTotal_2015a.csv", sep = ",",stringsAsFactors = FALSE, fill = TRUE)
+str(rawdat)
+
+```
+As the data structure shows all the coumns after the column X.22 are meaningless and were probably created by the transformation process from excel to csv. So only columns from X to X.22 are extracted from the raw data:
+```{r}
+UNdata <- select(rawdat,X:X.22)
+View(UNdata)
+```
+
+The extracted data have been reviewed again; The rows from 1 to 13 have few unrelvant data that need to be removed along with some unnecessary columns:
+
+```{r}
+UNdata <- UNdata[-(1:13),-(3:5)]
+View(UNdata)
+```
+
+Since the area of interest is Asian countries, only the records that contain asian data are extracted. The original excel data were organized in hierarchy where countries were arranged after their region and regions were arranged after the major areas they are belong to. So  all the rows containing Asian countries are located in between rows for two major areas "Asia" and "Europe" 
+```{r}
+start_row <- which(grepl("Asia",UNdata$X.1,ignore.case = TRUE))
+end_row <- which(grepl("Europe",UNdata$X.1,ignore.case = TRUE))
+##Asia_start <- which(str_extract(UNdata$X.1,str_trim(substr(UNdata$X.1,1,5),side="both")) == "Asia")
+##Asia_end <- which(str_extract(UNdata$X.1,str_trim(substr(UNdata$X.1,1,6),side="both")) == "Europe")
+asia_start <- start_row[1]
+asia_end <- end_row[1] -1
+
+AsiaData <- UNdata[c(1:3,asia_start:asia_end),]
+
+AsiaData <- mutate(AsiaData,region="")
+
+  ca <- which(grepl("Central Asia",AsiaData$X.1,ignore.case = TRUE))
+  ea<- which(grepl("Eastern Asia",AsiaData$X.1,ignore.case = TRUE))
+  se <- which(grepl("South-Eastern Asia",AsiaData$X.1,ignore.case = TRUE))
+  sa<- which(grepl("Southern Asia",AsiaData$X.1,ignore.case = TRUE))
+  wa<- which(grepl("Western Asia",AsiaData$X.1,ignore.case = TRUE))
+  
+  ca_start <- ca[1]
+  ea_start <- ea[1]
+  se_start <- se[1]
+  sa_start <- sa[1]
+  wa_start <- wa[1]
+  
+  
+  ca_end <-  ea_start -1
+  ea_end <- se_start-1
+  se_end <- sa_start-1
+  sa_end <- wa_start -1 
+  wa_end <- nrow(AsiaData)
+  
+  AsiaData$region[ca_start:ca_end] <- "Central Asia"
+  AsiaData$region[ea_start:ea_end] <- "Eastern Asia"
+  AsiaData$region[se_start:se_end] <- "South-Eastern Asia"
+  AsiaData$region[sa_start:sa_end] <- "Southern Asia"
+  AsiaData$region[wa_start:wa_end] <- "Western Asia"
+  
+  AsiaData <- AsiaData[-c(ca_start,ea_start,sa_start,wa_start,se_start),]
+  
+```
+Since the dataset repeats the same number of years based on the categories of sexes (i.e. male, female, and both), it is better to seperate them into three datasets:
+```{r}
+both_sex <- select(AsiaData,X.1,X.5:X.10,region)
+male <- select(AsiaData,X.1,X.11:X.16,region)
+female <- select(AsiaData,X.1,X.17:X.22,region)
+
+```
+
+A function to untidy data:
+Since in each of these three datasets, each of the coulmns from 2 to 6 contains data for specfic year and the year information is stored in row 2, the row values were used to rename the columns so that each column name reflects the year they have the data for. Also this would help to use "gather" function to untidy the data. Another column was added for gender.
+```{r}
+untidyAsian<- function(x) {
+  colnames(x)[2:7] <- unlist(x[2,2:7])
+  x <- gather(x,"year","migrant_stock",2:7)
+  if (grepl("both",x[1,3],ignore.case = TRUE))
+      {x <- mutate(x,sex="both") }
+  else if (grepl("male",x[1,3],ignore.case = TRUE))
+      {x <- mutate(x,sex="male") }
+  else if (grepl("female",x[1,3],ignore.case = TRUE))
+      {x <- mutate(x,sex="female") }
+  x[x==""] <- NA 
+  x <- na.omit(x)
+  colnames(x)[1] <- "area"
+  x <- x[-1,]
+  x$migrant_stock <- as.numeric(x$migrant_stock)
+  
+  
+  
+  return(x)
+}
+
+both_sex <- untidyAsian(both_sex)
+View(both_sex)
+
+male <- untidyAsian(male)
+View(male)
+
+female <- untidyAsian(female)
+View(female)
+
+
+
+```
+Finally append the three dataset to do some statistics
+
+```{r}
+asianDS <- rbind(both_sex,male,female)
+
+```
+
+#Some statistics:
+```{r}
+library(ggplot2)
+
+stock_statistics_year <- asianDS %>% group_by(region,year)%>% summarise(`Avg.migrant`=mean(migrant_stock),max = max(migrant_stock),`total migrant` = sum(migrant_stock))
+
+stock_statistics_region <- asianDS %>% group_by(region)%>% summarise(`Avg.migrant`=mean(migrant_stock),max = max(migrant_stock),`total migrant` = sum(migrant_stock))
+View(stock_statistics_year)
+  
+```
+Figure 1:
+```{r}
+
+ggplot(stock_statistics_region, aes(region,`Avg.migrant`))+geom_bar(aes(fill = region),stat = "identity", position = "dodge") + labs(title = "Avg. migrant stock by regions in 1990 to 2015 ", y = "avg. migrant stock")+theme(axis.text.x=element_text(angle=90,hjust=1))
+
+
+
+```
+figure 2
+```{r}
+
+ggplot(stock_statistics_year, aes( year, `Avg.migrant`))+geom_bar(aes(fill = region),stat = "identity", position = "dodge") + labs(title = "Avg. migrant stock by year in Asian regions", y = "Avg. Migrant stock")
+
+
+```
+Figure 1 and Figure 2 shows that overall South Asia has the biggest migrant stock in last 25 years. South Asia had its peak in 1990, which was the highest  among all regions and the stock gradually decreased over the years while Western Asia's number gradually increased and had the highest avg. migrant stock in 2015. Both of these two regions always had higher migration stock in every time period except in 1995 when Central Asia had the second position.
+
+
+```{r}
+south_asia <- asianDS[which(asianDS$region=="Southern Asia"),]
+Western_asia <- asianDS[which(asianDS$region=="Western Asia"),]
+
+SA_Country_highest<-south_asia[which.max(south_asia$migrant_stock),1]
+SA_Country_highest
+```
+Figure 3
+
+```{r}
+ggplot(south_asia, aes(x=year,y=migrant_stock) )+geom_point(aes(size=1, color=area)) 
+```
+
+
+Figure 3 suggests India is mostly responsible for the higher migrant stock in Southern Asia and also for the decreasing trend of migrant stock in the region.
+
+
+```{r}
+WA_Country_highest<-Western_asia[which.max(Western_asia$migrant_stock),1]
+WA_Country_highest
+```
+Figure 4:
+```{r}
+ggplot(Western_asia, aes(x=year,y=migrant_stock) )+geom_point(aes(size=1, color=area)) 
+```
+
+
+Figure 4 suggests Saudi Arabia is mostly responsible for the higher migrant stock in Western Asia and also for the Increasing trend of migrant stock in the region.
+
+
+
