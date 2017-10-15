@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<mybooklist>
+   <book id="b1">
+     <title>Happy City: Transforming Our Lives Through Urban Design</title>
+      <author>Charles Montgomery</author>
+      <publisher>Farrar, Straus and Giroux</publisher>        
+      <category>Urban Planning</category>
+      <price>40.00</price>
+      <publish_year>2013</publish_year>
+   </book>
+   <book id="b2">
+      <title>Design and Analysis</title>
+      <author>Bernard Leupen, Christoph Grafe, Nicola Kornig, Mark Lampe and Peter de Zeeuw</author>
+      <publisher>010 Publishers</publisher>        
+      <category>Architecture</category>
+      <price>35.00</price>
+      <publish_year>1993</publish_year>
+   </book>
+   <book id="b3">
+      <title>A New Digital Deal</title>
+      <author>Bas Boorsma</author>
+      <publisher>Rainmaking Publications</publisher>        
+      <category>Information System</category>
+      <price>25.00</price>
+      <publish_year>2017</publish_year>
+   </book>
+</mybooklist>
