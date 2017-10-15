@@ -1,0 +1,122 @@
+---
+title: "Data 607, Working with html, xml, JSON"
+author: "Mehdi Khan"
+date: "October 13, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=65),tidy=TRUE)
+suppressWarnings(library(rvest))
+```
+
+```{r}
+library(rvest)
+library(stringr)
+library(magrittr)
+
+```
+
+##read html page:
+read_html function was used to load the html. The function returns a list with all the html nodes.  
+```{r}
+htmlData <- read_html("C:\\temp\\book.html")
+htmlData
+```
+
+Since all the attribures of the books were in bold, they were extracted using html_nodes and html_text functions that provided all the texts in between all the <b> and <b/> tags:
+```{r}
+all_attr <- htmlData %>% html_nodes("b") %>% html_text() 
+all_attr <- str_trim(all_attr)
+```
+
+A character vector containing all the unique attributes of a book were produced bu using "unique" function
+```{r}
+uniq_attr <- unique(all_attr)
+```
+
+All the texts of the html data were extracted using html_text function:
+```{r}
+all_text <- str_replace_all(htmlData %>% html_text(), "[\r\n]" , "")
+```
+
+Since each of the books starts with its first attribute (in this case 'title') and ends before the first attribute of the next book, the positions of the fisrt attributes were used to seperate all the information of each book as seperate elements of a character vector that has the same length as the number of the books: 
+```{r}
+pos <- str_locate_all(all_text,uniq_attr[1] )
+
+bk_text <- rep(NA,nrow(pos[[1]]))
+
+for (i in 1:nrow(pos[[1]])){
+  if (i<3){
+    bk_text[i] <- str_sub(all_text,pos[[1]][i,1],pos[[1]][i+1,1]-1)
+  }else{
+   bk_text[i] <- str_sub(all_text,pos[[1]][i,1],str_length(all_text)) 
+  }
+ 
+}
+```
+
+
+A function was created that would find the positions (start and end) of each of the attributes for each of the books and extract the texts (attribute values) in between those positions and store them as elements of a character vector:  
+```{r}
+
+createBKds <- function(x,y) {
+ 
+  bk_pos <- str_locate(x,y)
+   BKDS <- vector("character",nrow(bk_pos))
+  for (i in 1:nrow(bk_pos)-1){
+    BKDS[i] <- str_trim(str_sub(x,bk_pos[i,2]+1,bk_pos[i+1,1]-1), side = "both" )
+  }
+  BKDS[nrow(bk_pos)] <- str_trim(str_sub(x,bk_pos[nrow(bk_pos),2]+1,str_length(x)), side = "both")
+  
+  return(BKDS)
+}
+```
+
+Finally a data frame was created where the column names represent the attributes of the books and each of the rows represents corresponding attribute values of a  book:
+```{r}
+htmlBookDS <- c()
+for (i in 1:length(bk_text)) {
+htmlBookDS <- rbind(htmlBookDS,createBKds(bk_text[i],uniq_attr))
+}
+htmlBookDS <- data.frame(htmlBookDS)
+colnames(htmlBookDS) <- str_replace(uniq_attr,":","")
+
+htmlBookDS
+
+```
+
+##read xml file:
+Four functions read_xml,xml_children, xml_text, xml_name were used to create the final data frame. xml_children function returned different elements in xml tree and xml_text returned character vectors containing data that were stored in between xml tags.    
+```{r}
+xml_data <- read_xml("C:\\temp\\book.xml")
+books <- xml_children(xml_data)
+
+xmlBookDS <- c()
+for (i in 1:length(books)){
+  xmlBookDS <- rbind(xmlBookDS,xml_text(xml_children(books[i])))
+}
+
+xmlBookDS <- data.frame(xmlBookDS)
+
+colnames(xmlBookDS) <- xml_name(xml_children(books[1]))
+
+xmlBookDS
+
+```
+
+##read json file:
+fromJSON function directly converted data in json format to a data frame in R:
+```{r}
+library(jsonlite)
+```
+load file
+```{r}
+jsonBookDS <- fromJSON("C:\\temp\\book.json")
+jsonBookDS
+```
+
+
+All three data frames are same that were created out of html, xml and JSON file. 
