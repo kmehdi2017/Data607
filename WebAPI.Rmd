@@ -1,0 +1,146 @@
+---
+title: "Web API"
+author: "Mehdi Khan"
+date: "October 26, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts=list(width.cutoff=65),tidy=TRUE)
+```
+
+# Load Libraries:
+```{r}
+suppressWarnings(suppressMessages(library(ggplot2)))
+suppressWarnings(suppressMessages(library(tidyr)))
+suppressWarnings(suppressMessages(library(stringr)))
+suppressWarnings(suppressMessages(library(dplyr)))
+suppressWarnings(suppressMessages(library(rvest)))
+suppressWarnings(suppressMessages(library(jsonlite)))
+suppressWarnings(suppressMessages(library(data.tree)))
+```
+
+#load data:
+An API key for Books API has been acquired from New York Times web site. The Books API provides information about book reviews and The New York Times bestsellers lists. 
+
+Since it returns a nested JSON objects, flatten parameter was used with fromJSON function.
+```{r}
+
+books <- fromJSON("https://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json?api-key=4a4f0c44e7f64b1d89aa568c29bf6e09", flatten = TRUE)
+
+str(books)
+```
+
+## Data Munging:
+
+As shown above the returned object is a list where the last element - a dataframe (results) contains all the data. There are three list of lists among the elements of this data frame, which were removed and processed later, a dataset was created with rest of the variables:
+```{r}
+isbn_index <- grep("isbns", colnames(books$results))
+ranks_index <- grep("ranks_history", colnames(books$results))
+review_index <- grep("reviews", colnames(books$results))
+bookDS <- books$results[,c(-isbn_index,-ranks_index,-review_index)]
+
+
+```
+
+A functon was created, which convert a multi-row data frame into a single-row data frame. 
+```{r}
+
+multiTOsingle <- function(x){
+  
+rnum <- nrow(x)
+  
+t<-""
+t2 <-""
+for(i in 1:rnum){
+t<- str_c(t,x[i,1],sep = ",")
+t2 <-str_c(t2,x[i,2],sep = ",") 
+}
+t<- str_replace(t,",","")
+t2<- str_replace(t2,",","")
+x[1,1] <- t
+x[1,2] <- t2
+
+return(x[1,])
+
+}
+```
+
+The above function was used in the list of lists that were identified earlier to convert all multi-row lists that exist as the elements of these lists of lists. List with zero rows were asigned with 'NA' values. Seperate datasets were created from each of these list of lists.
+
+process 'isbn' list:
+```{r}
+isbn_Holder <- cbind(books$results$isbns)
+
+for (i in 1:length(isbn_Holder)){
+if (nrow(isbn_Holder[[i]])>1){
+isbn_Holder[[i]] <- multiTOsingle(isbn_Holder[[i]] ) 
+ }
+ 
+if (nrow(isbn_Holder[[i]])==0){
+  for (j in 1:2){
+  isbn_Holder[[i]][1,j]<- NA
+   }
+  } 
+  
+}
+
+isbnDS  <-  as.data.frame(matrix(unlist(isbn_Holder),  ncol =length(unlist(isbn_Holder[1])), byrow=TRUE))
+colnames(isbnDS)<- colnames(isbn_Holder[[1]])
+
+
+```
+
+process 'ranks_history' list:
+```{r}
+
+
+ranks_Holder <- cbind(books$results$ranks_history)
+
+
+for (i in 1:length(ranks_Holder)){
+if (nrow(ranks_Holder[[i]])>1){
+ranks_Holder[[i]] <- multiTOsingle(ranks_Holder[[i]] ) 
+ }
+ 
+if (nrow(ranks_Holder[[i]])==0){
+  for (j in 1:11){
+  ranks_Holder[[i]][1,j]<- NA
+   }
+  } 
+  
+}
+
+
+ranks_historyDS  <-  as.data.frame(matrix(unlist(ranks_Holder),  ncol =length(unlist(ranks_Holder[1])), byrow=TRUE))
+colnames(ranks_historyDS)<- colnames(ranks_Holder[[1]])
+
+ranks_historyDS <- ranks_historyDS[,!names(ranks_historyDS) %in% c("ranks_last_week", "asterisk","dagger")]
+
+```
+
+process 'reviews' list:
+```{r}
+review_Holder <- cbind(books$results$reviews)
+
+reviewsDS  <-  as.data.frame(matrix(unlist(review_Holder),  ncol =length(unlist(review_Holder[1])), byrow=TRUE))
+colnames(reviewsDS)<- colnames(review_Holder[[1]])
+
+```
+
+All the datasets were combined to get the final dataset:
+```{r}
+finalBookDS <- cbind(bookDS,isbnDS,ranks_historyDS,reviewsDS)
+```
+
+## Final Data Frame
+finally all columns with no data were removed. Further data cleaning and untidy operations may need to be applied to the resulting data frame according to its future use or purpose of future data analysis projects:
+```{r}
+finalBookDS <- finalBookDS[,c(-5,-7,-19,-20,-22)]
+
+head(finalBookDS)
+```
+
+
