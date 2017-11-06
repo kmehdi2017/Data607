@@ -1,0 +1,232 @@
+---
+title: "document classification"
+author: "Mehdi Khan"
+date: "November 3, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts=list(width.cutoff=65),tidy=TRUE)
+```
+#Introduction:
+Data: all the data were downloaded from http://spamassassin.apache.org/old/publiccorpus/ and stored in local drives. In order to make it manageable a subset of the data - 100 files of each types (spam amd ham) of emails were used. These data can be found at https://github.com/kmehdi2017/ in "data607-spam"" and "data607-ham" repositories. 
+
+Load all the required libraries:
+```{r}
+suppressWarnings(suppressMessages(library(tm)))
+suppressWarnings(suppressMessages(library(ggplot2)))
+suppressWarnings(suppressMessages(library(tidyr)))
+suppressWarnings(suppressMessages(library(stringr)))
+suppressWarnings(suppressMessages(library(dplyr)))
+suppressWarnings(suppressMessages(library(SnowballC)))
+
+#suppressWarnings(suppressMessages(library(rvest)))
+suppressWarnings(suppressMessages(library(plyr)))
+suppressWarnings(suppressMessages(library(class)))
+suppressWarnings(suppressMessages(library(e1071)))
+suppressWarnings(suppressMessages(library(wordcloud)))
+suppressWarnings(suppressMessages(library(RColorBrewer)))
+
+```
+
+A function was created to clean a corpus. Since the texts contain many htmal tags, they were removed by finding and replacing patterns. Then all the punctuation, stopwords, numbers were removed. All the words were stemmed and converted to lower cases:  
+```{r}
+
+cleanCor <- function(corp){
+  clcorp <- tm_map(corp,str_replace_all,"<[^>]+>","" )
+  clcorp <- tm_map(clcorp,content_transformer(removePunctuation))
+  clcorp <- tm_map(clcorp, removeWords, stopwords("english"))
+  clcorp <- tm_map(clcorp, content_transformer (stemDocument))
+  clcorp <- tm_map(clcorp, removeNumbers)
+  clcorp <- tm_map(clcorp, tolower)
+ 
+ 
+  return(clcorp)
+}
+
+```
+
+
+#create Corpus:
+Two separate Corpus were created with spam and ham emails:
+```{r}
+spam_corpus <- Corpus(DirSource("./spam", encoding = "UTF-8"))
+meta(spam_corpus,"class") <- "spam"
+spam_corpus <- cleanCor(spam_corpus)
+
+ham_corpus <- Corpus(DirSource("./ham", encoding = "UTF-8"))
+meta(ham_corpus,"class") <- "ham"
+ham_corpus <- cleanCor(ham_corpus)
+
+```
+
+A word Cloud for the Corpus containing spam files: 
+```{r}
+wordcloud(spam_corpus, min.freq=1, scale = c(5, .3), max.words = 100, random.order=FALSE, rot.per=.15,colors=brewer.pal(8,"Dark2"))
+```
+
+
+A word Cloud for the Corpus containing ham files: 
+```{r}
+wordcloud(ham_corpus, min.freq=1, scale = c(5, .3), max.words = 100, random.order=FALSE, rot.per=.15,colors=brewer.pal(9,"Set1"))
+```
+
+
+
+Another function was created that takes a term document matrix (tdm) and a string as parameters, then transposes the matrix and convert it to a data frame and adds a column to it that refers to specific email type (i.e. spam or ham):   
+```{r}
+createDF <- function(tdm,etype){
+  
+  email_mat <- t(data.matrix(tdm))
+  email_df <- as.data.frame(email_mat)
+  
+  email_df$emailType <- etype
+  return(email_df)
+}
+```
+
+
+Two "Term Document Matrix" were created for each of the email types that were converted to data frames using the function described above:
+```{r}
+s_tdm <- TermDocumentMatrix(spam_corpus)
+s_tdm <- removeSparseTerms(s_tdm,1-(11/length(spam_corpus)))
+s_tdm
+s_df <- createDF(s_tdm,"spam")
+
+h_tdm <- TermDocumentMatrix(ham_corpus)
+h_tdm <- removeSparseTerms(h_tdm,1-(11/length(ham_corpus)))
+h_tdm
+
+h_df <- createDF(h_tdm,"ham")
+
+```
+
+Finally the two data frames were combined together using rbind.fill function so that all the different terms (now acting as variables) that do not exist in both data frames are present in the combined data frame with NA values. Finally all the NA values were converted to 0 (zero):
+```{r}
+dfStack <- rbind.fill(s_df,h_df)
+dfStack[is.na(dfStack)]<- 0
+
+```
+
+## Creation, train and Test model
+
+Two indices were created for training and testing in way so that so that 70% of the data are used for training and rest 30% are used for testing the model. Two objects - one contains only the classification column (email type) and the other contains all the columns except the classification were created so that they can be used in the models.
+
+#train and test the data using "K nearest neighbors (KNN)"  model:
+```{r}
+indTrain <- sample(nrow(dfStack), ceiling(nrow(dfStack)*0.7))
+indTest <- (1:nrow(dfStack))[-indTrain]
+eType <- dfStack[,"emailType"]
+alldata <- dfStack[,!colnames(dfStack) %in% "emailType"]
+
+KNNprediction <- knn(alldata[indTrain,],alldata[indTest,],eType[indTrain])
+```
+
+Accuracy:
+A confusion matrix was created and the accuracy of the model was calculated. 90% to 100% accuracies were found when tested with different samples 
+```{r}
+# confusion matrix
+confusionMat <- table("predicted"=KNNprediction, Actual = eType[indTest])
+
+accuracy <- sum(diag(confusionMat))/(length(indTest) )
+print(accuracy)
+```
+
+Running the KNN model multiple times:
+```{r}
+
+multiAccuracy <- rep(NA,100)
+
+
+
+for (i in 1:100){
+  
+  indTrain <- sample(nrow(dfStack), ceiling(nrow(dfStack)*0.7))
+  indTest <- (1:nrow(dfStack))[-indTrain]
+  KNNprediction <- knn(alldata[indTrain,],alldata[indTest,],eType[indTrain])
+  
+  
+  confusionMat <- table("predicted"=KNNprediction, Actual = eType[indTest])
+
+  accuracy <- sum(diag(confusionMat))/(length(indTest) )
+
+  multiAccuracy[i]<- accuracy
+}
+
+
+```
+
+Histogram of Accuracies (KNN model):
+```{r}
+qplot(multiAccuracy, geom="histogram", binwidth = 0.016, main = "Histogram of accuracy of 100 results, KNN model", xlab = "Accuracy",  fill=I("blue"),      col=I("red"), alpha=I(.2) )
+
+```
+
+The above histogram shows the accrucay of KNN model varied from  than 90% to 100% for 100 sample data sets. The 100% accuracy seems to be more common for this model for this specific data sets.   
+
+
+
+
+# train and test the data using Naive Bayes model:
+```{r}
+# TRAIN 
+model <- naiveBayes(alldata[indTrain,],as.factor(eType[indTrain]))
+
+# TEST
+results <- predict(model,alldata[indTest,])
+
+# confusion matrix
+conMat <- table("predicted"=results, Actual = eType[indTest])
+```
+
+
+Running the Naive Bayes model multiple times:
+```{r}
+accuracy_bayes <- rep(NA,100)
+
+for (i in 1:100){
+  indTrain <- sample(nrow(dfStack), ceiling(nrow(dfStack)*0.7))
+  indTest <- (1:nrow(dfStack))[-indTrain]
+  
+  # train
+    model <- naiveBayes(alldata[indTrain,],as.factor(eType[indTrain]))
+
+  # test
+    results <- predict(model,alldata[indTest,])
+
+  # confusion matrix
+    conMat <- table("predicted"=results, Actual = eType[indTest])
+  
+    accuracy <- sum(diag(conMat))/(length(indTest) )
+
+    accuracy_bayes[i]<- accuracy
+}
+
+
+```
+
+Histogram of Accuracies (Naive Bayes model):
+```{r}
+qplot(accuracy_bayes, geom="histogram", binwidth = 0.019, main = "Histogram of accuracy of 100 results, Naive Bayes model", xlab = "Accuracy",  fill=I("green"),      col=I("red"), alpha=I(.2) )
+
+
+```
+
+The above histogram shows the accrucay of Naive Bayes model varied from less than 75% to around 95% for 100 sample data sets. The 100% accuracy was never achieved and  accuracies between 85% to 90% were more frequent.
+
+
+## Conclusion:
+Two classification models - Naive Bayes and K nearest neighbors (KNN) were used using two sets of files for spam and ham emails with 100 files for each email type (total 200 files). The KNN model worked better for these sample data sets reaching 100% accuracy more frequently. KNN model also found to be very less expensive (in terms of computing power ) compared to Naive Bayes model.
+
+
+## References:
+The following you tube videos and websites were consulted for the project:
+
+http://web.letras.up.pt/bhsmaia/EDV/apresentacoes/Bradzil_Classif_withTM.pdf
+https://www.r-bloggers.com/document-classification-using-r/
+https://rstudio-pubs-static.s3.amazonaws.com/194717_4639802819a342eaa274067c9dbb657e.html
+https://www.youtube.com/watch?v=c3fnHA6yLeY
+https://www.youtube.com/watch?v=DdYSMwEWbd4
+https://www.youtube.com/watch?v=j1V2McKbkLo
