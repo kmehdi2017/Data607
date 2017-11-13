@@ -1,0 +1,94 @@
+---
+title: "LinkedIn Recommender System"
+author: "Mehdi Khan"
+date: "November 10, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Introduction:
+In one sentence LinkedIn can be described as the "Social Network for Professionals" - so it is social networking like Facebook or similar social media but from the perspective and in the context of professional lives. This is like socialization in after-conference happy hours but in online, people can talk casual but with and for professional interests.
+
+
+# Scenario Design for LinkedIn
+Target users of LinkedIn:
+LinkedIn is for anyone and everyone who has a professional interest. Its intended audience ranges from the most senior executives of companies with worldwide businesses to junior managers in startup companies to recent graduates looking for a job and everyone in between. LinkedIn also targets recruiters and allows organizations of all types to have accounts as individual entities.   
+
+# LinkedIn's key goals
+AS per their website LinkedIn's objective is to “connect the world's professionals to make them more productive and successful” with a vision of “creating economic opportunity for every member of the global workforce.”
+
+LinkedIn has both free and paid membership accounts. So the LinkedIn business model is to generate revenue by connecting professionals and companies online in a way so that its members can grow professionally or can add values to their careers or businesses. With this business model LinkedIn’s goals are:
+
+a. Connect professionals
+b. Provide tools for them to communicate publicly or privately 
+c. Create platforms for their members to display their marketability
+c. Job hosting and job posting
+d. Job recommendations and advertising 
+d. recommendations of new connections, events, jobs, publications to members according their interests
+
+# Helping them to accomplish those goals:
+As stated above the apparent business model of LinkedIn is to generate revenue by connecting professionals that would create values to its users. So there are two areas of concerns that must be considered and explored to achieve those goals:
+
+a. The Framework:  
+Designing of  the components that would provide the services: identify  the user groups, how they can be categorized (by age, experience, expertise, locations etc.), what mechanisms would the best for each individual  user groups to represent themselves, how they will communicate, how recommendations for new connections and/or jobs would made etc. various questions need to be researched, answered and evaluated in order to create a sound system that would be the foundation for LinkedIn to achieve its goals.    
+
+b. User Experience: 
+Ensuring the quality of the services that above system would provide. i.e. all those tools and mechanisms for communications, recommendations, increasement of users' marketability etc. should be evaluated frequently in terms of user-friendliness, execution time and meeting users' expectation and requirements. This would create the opportunity to design and improve tools to achieve goals with a happy customer base. 
+
+In both cases analysis of customer behaviors, feedbacks, expectation and frustrations would be hugely useful in recommending customers with a new possible connection, an appropriate job, or suggesting a recruiter the perfect candidate for a new job. Comparative analysis of customers’ expectations and what they actually receive would help Linked to better plan their next updates.
+
+#Reverse engineering of LinkedIn site:
+The reverse engineering process was limited to extract knowledge as much as possible as an unpaid member of LinkedIn. Some advanced features were avoided for the lack of having a paid account; however a lot could be analyzed with a free account.
+
+The recommenders are at play in LinkedIn right after a user logs into the site. The page appears with feeds (such as articles, events, announcements etc.) that are supposed to be tailored to individual users need and interest. Linked in also recommends jobs and new connections to other professionals, display interesting messages all of which are, in theory, good match to users interests and backgrounds. Samples were taken for each category.  Analyses were done as described below:
+
+LinkedIn feed:
+50 items were taken into consideration, which after a closer look seem to sprang from some obvious resources -  user profile, individual user's connections (i.e. a connection's recent activity), user's recent search terms, the organizations the user follows, user's educational institution and the user's resume. 
+
+Out of 50, about only 30 items were somehow relevant to user's interest. The items that  apparently came from a connection's "like" or events, article and/or announcements from  user's old schools, or  businesses that the user follows - have less relevancy with what the user is really interested in. For example, a seminar on human resource in user's old school really is not relevant to user's interest in data science. 
+
+The 10 items from section "What people are talking about now" - the top professional news and conversations of the day, were found to be entirely irrelevant to the user's interest.
+
+
+A further filtering of those items would improve the feed.
+
+Job recommendations:
+It seems job recommendations are made based on key words from the users’ profile (for users' experience, current positions, education etc.), recent search, connected companies etc. 
+"Because you viewed" and "Jobs you may be interested in" sections in the "job" page in LinkedIn use machine learning  that recommends similar jobs that were previously searched by a user or by the connections of the user. LinkedIn also lists jobs that are currently open in the companies that are within the network of a user. 
+
+Among a sample of 20 jobs, 14 were found to be relevant and seem to be based on user's recent job search. Jobs that were recommended apparently based on the key words that came from the user's resume or profile failed to pinpoint user's interest. For example the words "program manager" generated recommendation of program manager positions in fields that have no relation with the user's background.
+
+Connection recommendations:
+Seemingly most successful recommendations generated in these sections. "People you may know" section where professionals with similar backgrounds are listed as potentials new connections of a user and "People also viewed" section listed profiles of professionals with similar backgrounds when a specific profile was viewed. All of these recommendations were appropriate in most of the cases.
+
+Apart from the above, LinkedIn also recommends on talent match for recruiters i.e.  When recruiters post jobs, LinkedIn in real-time suggests top candidates for the jobs.
+
+
+# LinkedIn recommender:
+According to various papers on LinkedIn recommender, LinkedIn uses content matching and collaborative filtering to recommend companies or jobs a user might be interested in. LinkedIn collects data on positions, education, summary, specialty, experience and skills of a user from the profile itself. Then, from member’s activity - data about member’s connections, the groups that the member has joined, the companies that the member follows amongst others are collected.  In order to accurately match members to jobs LinkedIn uses "Entity Resolution", which is the task of disambiguating manifestations of real world entities in various records or mentions by linking and grouping. LinkedIn applies machine learnt classifiers for the entity resolution using a host of features for company standardization.
+
+LinkedIn claims that it uses hybrid recommenders to address various challenges for various products in its site, which is a trade off in real-time Vs time independent recommendations. For example, "News Recommendation", which finds relevant news for its users. Relevant news today might be old news tomorrow. Hence, News recommendation has to have a strong real-time component. On the other hand "Similar Profiles" provides hiring recommendation which does not have time constraints because "people don’t reinvent themselves every day." Job recommendation is heavy on content analysis because a job poster naturally expects the candidates to have a strong match between job and the profile, while "Viewers of the profile also viewed" is heavy on collaborative filtering, which showcases relationships between pairs of items based on the wisdom of the crowd much like Amazon’s “‘people who viewed this item also viewed”.  
+
+
+# Suggestions for Improvement:
+From the small samples in different categories stated above -  LinkedIn recommendations was 60% successful in user feed, 0% successful in news ("What people are talking about now") suggestions, 70% successful in job recommendations and around 99% successful in suggesting similar connections.
+
+In order to have more success in some of these sections LinkedIn may consider additional measures both in the  "Frame work" and "user experience" - the two area of concerns as identified earlier.
+
+Improvement in the framework: 
+LinkedIn receives mostly implicit user- feedbacks. It might improve the content analysis if LinkedIn would add a component in its framework to collect explicit feedbacks from the users; such as short surveys with specific questions on users' interests. This would help LinkedIn to have up to date contents that would provide better results.
+
+Improvement in user experience: 
+LinkedIn uses content analysis and collaborative filtering recommendation systems. In addition to these, an emphasis on contextual recommendation algorithms would help the users find recommendations that would be better fit to their current contexts.  
+
+
+# References:
+Following websites were consulted for the report:
+
+https://www.quora.com/How-does-LinkedIns-recommendation-system-work
+https://yanirseroussi.com/2015/10/02/the-wonderful-world-of-recommender-systems/
+https://engineering.linkedin.com/recommender-systems/browsemap-collaborative-filtering-linkedin
+http://learn.filtered.com/blog/linkedin-is-boring
+https://phvu.net/2013/07/13/recommender-systems-at-linkedin/
